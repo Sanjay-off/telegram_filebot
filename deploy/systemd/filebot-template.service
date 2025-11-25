@@ -1,0 +1,24 @@
+[Unit]
+Description=Telegram Template Generator Bot
+After=network.target
+
+[Service]
+Type=simple
+
+# Project root directory
+WorkingDirectory=/home/ubuntu/telegram_filebot
+
+# Run bot using its virtual environment
+ExecStart=/home/ubuntu/telegram_filebot/venv/bin/python3 -m template_bot
+
+# Restart automatically on crash
+Restart=always
+RestartSec=5
+
+# Run as ubuntu user
+User=ubuntu
+
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

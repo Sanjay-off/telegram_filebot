@@ -1,0 +1,25 @@
+[Unit]
+Description=Telegram File Delivery Bot (Main)
+After=network.target
+
+[Service]
+Type=simple
+
+# Project directory
+WorkingDirectory=/home/ubuntu/telegram_filebot
+
+# Run using venv + module execution
+ExecStart=/home/ubuntu/telegram_filebot/venv/bin/python3 -m main_bot
+
+# Auto-restart on crash
+Restart=always
+RestartSec=5
+
+# Run as ubuntu user
+User=ubuntu
+
+# Reduce environment buffering
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
