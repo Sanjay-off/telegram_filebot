@@ -1,0 +1,89 @@
+from pyrogram import Client, filters
+from pyrogram.types import Message
+from dotenv import load_dotenv
+import os
+from base64 import urlsafe_b64encode
+
+load_dotenv()
+
+API_ID = int(os.getenv("API_ID", "0"))
+API_HASH = os.getenv("API_HASH", "")
+BOT_TOKEN_TEMPLATE = os.getenv("BOT_TOKEN_TEMPLATE", "")
+MAIN_BOT_USERNAME = os.getenv("BOT_USERNAME", "YourMainBotUsername")
+
+app = Client("template_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN_TEMPLATE)
+
+STATE = {}
+
+def italic(text: str) -> str:
+    base = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    italic_chars = "𝘈𝘉𝘊𝘋𝘌𝘍𝘎𝘏𝘐𝘑𝘒𝘓𝘔𝘕𝘖𝘗𝘘𝘙𝘚𝘛𝘜𝘝𝘞𝘟𝘠𝘡𝘢𝘣𝘤𝘥𝘦𝘧𝘨𝘩𝘪𝘑𝘬𝘭𝘮𝘯𝘰𝘱𝘲𝘳𝘴𝘵𝘶𝘷𝘸𝘹𝘺𝘻"
+    table = str.maketrans({base[i]: italic_chars[i] for i in range(len(base))})
+    return text.translate(table)
+
+def fancy_title(text: str) -> str:
+    mapping = str.maketrans({
+        "A": "🅰", "B": "🅱", "C": "🅲", "D": "🅳",
+        "E": "🅴", "F": "🅵", "G": "🅶", "H": "🅷",
+        "I": "🅸", "J": "🅹", "K": "🅺", "L": "🅻",
+        "M": "🅼", "N": "🅽", "O": "🅾", "P": "🅿",
+        "Q": "🆀", "R": "🆁", "S": "🆂", "T": "🆃",
+        "U": "🆄", "V": "🆅", "W": "🆆", "X": "🆇",
+        "Y": "🆈", "Z": "🆉",
+    })
+    return text.upper().translate(mapping)
+
+def encode_file_code(raw_code: str) -> str:
+    return urlsafe_b64encode(raw_code.encode("utf-8")).decode("ascii")
+
+@app.on_message(filters.command("start"))
+async def start_cmd(client: Client, message: Message):
+    await message.reply_text("Send me a file (ZIP / VIDEO / etc.) to generate a public group template.")
+
+@app.on_message(filters.private & ~filters.command(["start"]))
+async def handle_file_or_text(client: Client, message: Message):
+    user_id = message.from_user.id
+    st = STATE.get(user_id, {})
+
+    if not st.get("file_msg"):
+        if not (message.document or message.video or message.audio):
+            await message.reply_text("Please send a file first (ZIP / VIDEO / etc.).")
+            return
+        STATE[user_id] = {"file_msg": message}
+        await message.reply_text("ᵀʸᵖᵉ ᵖᵒˢᵗ ⁿᵘᵐᵇᵉʳ (example: 59):")
+        return
+
+    if "post_number" not in st:
+        st["post_number"] = message.text.strip()
+        STATE[user_id] = st
+        await message.reply_text("𝘕𝘰𝘸 𝘵𝘺𝘱𝘦 𝘥𝘦𝘴𝘤𝘳𝘪𝘱𝘵𝘪𝘰𝘯 𝘧𝘰𝘳 𝘵𝘩𝘪𝘴 𝘱𝘰𝘴𝘵:")
+        return
+
+    if "description" not in st:
+        st["description"] = message.text.strip()
+        STATE[user_id] = st
+        await generate_template(client, message, st)
+        STATE.pop(user_id, None)
+        return
+
+async def generate_template(client: Client, message: Message, st: dict):
+    post_number = st["post_number"]
+    desc = st["description"]
+
+    raw_file_code = f"file_{post_number}"
+    encoded = encode_file_code(raw_file_code)
+
+    header = fancy_title(f"Post - {post_number}")
+    text_lines = [
+        f"**{header}**",
+        "",
+        f"𝘋𝘦𝘴𝘤𝘳𝘪𝘱𝘵𝘪𝘰𝘯: {italic(desc)}",
+        "",
+        "⬇ **𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗** ⬇",
+        "",
+        f"[DOWNLOAD](https://t.me/{MAIN_BOT_USERNAME}?start={encoded})",
+    ]
+    await message.reply_text("\n".join(text_lines), disable_web_page_preview=True)
+
+if __name__ == "__main__":
+    app.run()
